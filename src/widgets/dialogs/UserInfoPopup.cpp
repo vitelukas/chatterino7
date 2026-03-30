@@ -737,6 +737,50 @@ void UserInfoPopup::installEvents()
         [this](int newState) mutable {
             if (this->isKick_)
             {
+                const auto reenableBlockCheckbox = [this] {
+                    this->ui_.block->setEnabled(true);
+                };
+
+                if (!this->ui_.block->isEnabled())
+                {
+                    reenableBlockCheckbox();
+                    return;
+                }
+
+                if (this->kickUserID_ == 0)
+                {
+                    QSignalBlocker blocker(this->ui_.block);
+                    this->ui_.block->setCheckState(Qt::Unchecked);
+                    this->channel_->addSystemMessage(
+                        u"Unable to block user: missing Kick user ID."_s);
+                    return;
+                }
+
+                if (newState == Qt::Unchecked)
+                {
+                    getSettings()->unblockKickUser(this->kickUserID_);
+                    this->channel_->addSystemMessage(
+                        QString("You successfully unblocked user %1")
+                            .arg(this->userName_));
+                    reenableBlockCheckbox();
+                    return;
+                }
+
+                if (newState == Qt::Checked)
+                {
+                    getSettings()->blockKickUser(this->kickUserID_,
+                                                 this->userName_);
+                    this->channel_->addSystemMessage(
+                        QString("You successfully blocked user %1")
+                            .arg(this->userName_));
+                    reenableBlockCheckbox();
+                    return;
+                }
+
+                qCWarning(chatterinoWidget)
+                    << "Unexpected check-state when blocking" << this->userName_
+                    << QMetaEnum::fromType<Qt::CheckState>().valueToKey(
+                           newState);
                 return;
             }
 
@@ -1533,7 +1577,8 @@ void UserInfoPopup::updateKickUserData()
         {
             self->ui_.ignoreHighlights->setEnabled(true);
         }
-        self->ui_.block->setChecked(/*is_ignoring=*/false);
+        auto isIgnoring = getSettings()->isKickUserIgnored(self->kickUserID_);
+        self->ui_.block->setChecked(isIgnoring);
         self->ui_.block->setEnabled(true);
         self->ui_.ignoreHighlights->setChecked(isIgnoringHighlights);
         self->ui_.notesAdd->setEnabled(true);
@@ -1592,7 +1637,9 @@ void UserInfoPopup::updateKickUserData()
     this->ui_.ignoreHighlights->setEnabled(false);
     this->ui_.notesAdd->setEnabled(false);
 
-    bool isMyself = false;  // FIXME: kick account
+    bool isMyself =
+        getApp()->getAccounts()->kick.current()->username().compare(
+            this->userName_, Qt::CaseInsensitive) == 0;
     this->ui_.block->setVisible(!isMyself);
     this->ui_.ignoreHighlights->setVisible(!isMyself);
 }

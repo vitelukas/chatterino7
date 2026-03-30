@@ -251,6 +251,13 @@ void KickChatServer::onChatMessage(KickChannel *channel, BoostJsonObject data)
     auto [msg, highlight] = KickMessageBuilder::makeChatMessage(channel, data);
     if (msg)
     {
+        // Check if sender is in the ignore list
+        auto senderID = data["sender"]["id"].toUint64();
+        if (getSettings()->isKickUserIgnored(senderID))
+        {
+            return;  // Discard message from ignored user
+        }
+
         channel->applySimilarityFilters(msg);
 
         if (!msg->flags.has(MessageFlag::Similar) ||

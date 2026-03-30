@@ -22,6 +22,7 @@
 #include "controllers/nicknames/Nickname.hpp"
 #include "controllers/sound/ISoundController.hpp"
 #include "providers/emoji/EmojiStyle.hpp"
+#include "providers/kick/KickIgnoredUser.hpp"
 #include "singletons/Toasts.hpp"
 #include "util/RapidJsonSerializeQString.hpp"  // IWYU pragma: keep
 #include "widgets/NotebookEnums.hpp"
@@ -33,6 +34,7 @@
 
 #include <optional>
 #include <string_view>
+#include <unordered_set>
 
 using TimeoutButton = std::pair<QString, int>;
 
@@ -865,6 +867,11 @@ public:
     SignalVector<ModerationAction> moderationActions;
     SignalVector<ChannelLog> loggedChannels;
 
+    // Kick-specific settings
+    ChatterinoSetting<std::vector<KickIgnoredUser>> kickIgnoredUsersSetting = {
+        "/kick/ignoredUsers"};
+    SignalVector<KickIgnoredUser> kickIgnoredUsers;
+
     bool isHighlightedUser(const QString &username);
     bool isBlacklistedUser(const QString &username);
     bool isMutedChannel(const QString &channelName);
@@ -873,8 +880,14 @@ public:
     void mute(const QString &channelName);
     void unmute(const QString &channelName);
 
+    bool isKickUserIgnored(uint64_t userID) const;
+    void blockKickUser(uint64_t userID, const QString &username);
+    void unblockKickUser(uint64_t userID);
 private:
     void updateModerationActions();
+    void rebuildKickIgnoredUserIDs();
+
+    std::unordered_set<uint64_t> kickIgnoredUserIDs_;
 
     std::unique_ptr<rapidjson::Document> snapshot_;
 

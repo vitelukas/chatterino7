@@ -429,6 +429,7 @@ set(SOURCE_FILES
         providers/kick/KickMessageBuilder.cpp
         providers/kick/KickMessageBuilder.hpp
 
+        providers/kick/KickIgnoredUser.hpp
         providers/links/LinkInfo.cpp
         providers/links/LinkInfo.hpp
         providers/links/LinkResolver.cpp
@@ -871,6 +872,8 @@ set(SOURCE_FILES
         widgets/settingspages/HighlightingPage.hpp
         widgets/settingspages/IgnoresPage.cpp
         widgets/settingspages/IgnoresPage.hpp
+        widgets/settingspages/KickBlockedUsersPage.cpp
+        widgets/settingspages/KickBlockedUsersPage.hpp
         widgets/settingspages/KeyboardSettingsPage.cpp
         widgets/settingspages/KeyboardSettingsPage.hpp
         widgets/settingspages/ModerationPage.cpp

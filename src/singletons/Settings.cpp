@@ -18,6 +18,7 @@
 #include "util/Backup.hpp"
 #include "util/WindowsHelper.hpp"
 
+#include "providers/kick/KickIgnoredUser.hpp"
 #include <pajlada/signals/scoped-connection.hpp>
 
 namespace {
@@ -141,10 +142,47 @@ bool Settings::toggleMutedChannel(const QString &channelName)
         this->unmute(channelName);
         return false;
     }
-    else
+    this->mutedChannels.append(channelName);
+    return true;
+}
+
+bool Settings::isKickUserIgnored(uint64_t userID) const
+{
+    return this->kickIgnoredUserIDs_.contains(userID);
+}
+
+void Settings::blockKickUser(uint64_t userID, const QString &username)
+{
+    if (!this->kickIgnoredUserIDs_.contains(userID))
     {
-        this->mutedChannels.append(channelName);
-        return true;
+        this->kickIgnoredUserIDs_.insert(userID);
+        this->kickIgnoredUsers.append(KickIgnoredUser(userID, username));
+    }
+}
+
+void Settings::unblockKickUser(uint64_t userID)
+{
+    this->kickIgnoredUserIDs_.erase(userID);
+
+    auto raw = this->kickIgnoredUsers.raw();
+    for (std::vector<int>::size_type i = 0; i != raw.size(); i++)
+    {
+        if (raw[i].getUserID() == userID)
+        {
+            this->kickIgnoredUsers.removeAt(i);
+            i--;
+        }
+    }
+}
+
+void Settings::rebuildKickIgnoredUserIDs()
+{
+    this->kickIgnoredUserIDs_.clear();
+
+    auto items = this->kickIgnoredUsers.readOnly();
+    for (const auto &ignoredUser : *items)
+    {
+        this->kickIgnoredUserIDs_.insert(ignoredUser.getUserID());
     }
 }
 
@@ -227,6 +265,15 @@ Settings::Settings(const Args &args, const QString &settingsDirectory,
                            this->moderationActions);
     initializeSignalVector(this->signalHolder, this->loggedChannelsSetting,
                            this->loggedChannels);
+    initializeSignalVector(this->signalHolder, this->kickIgnoredUsersSetting,
+                           this->kickIgnoredUsers);
+
+    this->rebuildKickIgnoredUserIDs();
+    this->signalHolder.managedConnect(this->kickIgnoredUsers.delayedItemsChanged,
+                                      [this] {
+                                          this->rebuildKickIgnoredUserIDs();
+                                      });
+
 
     instance_ = this;
 
